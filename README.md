@@ -24,7 +24,7 @@ A modern, interactive Deep Learning Web Application built with **PyTorch** and *
 - **Language**: Python 3.8+
 
 ---
-.
+
 ## 📂 Project Structure
 
 ```text
