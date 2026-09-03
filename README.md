@@ -6,13 +6,14 @@ A modern, interactive Deep Learning Web Application built with **PyTorch** and *
 
 ## 🌟 Key Features
 
-- **🤖 PyTorch AI Engine**: Powered by **MobileNetV2** architecture fine-tuned for high-accuracy binary image classification.
+- **🤖 PyTorch AI Engine**: Powered by **MobileNetV2** architecture fine-tuned for high-accuracy binary image classification combined with an open-world ImageNet detector.
+- **🛡️ Unknown Object Detection**: Automatically detects when an image is neither a Cat nor a Dog (e.g. cars, people, food, other objects) and flags it as **Unknown ❓** while identifying the closest matching object.
 - **🎨 Glassmorphism UI**: Custom Dark-themed Streamlit interface with dynamic visual feedback and smooth styling.
-- **📊 Detailed Analysis**: Displays predicted class, percentage confidence, and probability distribution for both Cat and Dog classes.
+- **📊 Detailed Analysis**: Displays predicted class, percentage confidence, and probability distribution.
 - **🖼️ Flexible Input**:
   - Upload your own local images (`.jpg`, `.jpeg`, `.png`).
-  - Use 1-click sample images provided in the dataset.
-- **⚡ Fallback Mechanism**: Dynamically loads fine-tuned model weights (`cat_dog_model.pth`) or falls back to pre-trained ImageNet weights seamlessly.
+  - Use 1-click sample images (Cat, Dog, or Other) provided in the dataset.
+- **⚡ Smart Hybrid Inference**: Seamlessly loads fine-tuned weights (`cat_dog_model.pth`) alongside open-world classification.
 
 ---
 

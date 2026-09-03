@@ -78,11 +78,28 @@ st.markdown("""
         text-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
     }
 
+    .unknown-badge {
+        color: #f59e0b;
+        text-shadow: 0 0 20px rgba(245, 158, 11, 0.4);
+    }
+
     .confidence-text {
         font-size: 1.3rem;
         font-weight: 600;
         color: #cbd5e1;
-        margin-bottom: 1.5rem;
+        margin-bottom: 1.2rem;
+    }
+
+    .object-tag {
+        display: inline-block;
+        background: rgba(245, 158, 11, 0.15);
+        border: 1px solid rgba(245, 158, 11, 0.35);
+        color: #fbbf24;
+        padding: 0.4rem 1rem;
+        border-radius: 9999px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        margin-bottom: 1.2rem;
     }
 
     .metric-row {
@@ -127,7 +144,7 @@ st.markdown("""
 # ---------------------------------------------------------
 # Load Model Resource (Cached)
 # ---------------------------------------------------------
-@st.cache_resource(show_spinner="Loading PyTorch AI Model...")
+@st.cache_resource(show_spinner="Loading PyTorch AI Engine...")
 def get_model():
     return load_classifier("cat_dog_model.pth")
 
@@ -143,19 +160,21 @@ with st.sidebar:
     
     st.markdown("### 🤖 Model Engine")
     if model_type == "fine_tuned":
-        st.success("✅ Fine-Tuned PyTorch Model")
+        st.success("✅ Fine-Tuned + Open-World Detector")
     else:
-        st.info("⚡ Pre-trained MobileNetV2 (PyTorch)")
+        st.info("⚡ MobileNetV2 Open-World Detector")
         
     st.markdown("---")
     st.markdown("### 🖼️ Quick Sample Test")
-    st.caption("Select a sample image from the dataset to test instantly:")
+    st.caption("Select a sample image to test instantly:")
     
     sample_cat_dir = "archive/Cats"
     sample_dog_dir = "archive/Dogs"
+    sample_unknown_dir = "archive/Unknown"
     
     sample_cat = None
     sample_dog = None
+    sample_unknown = None
     
     if os.path.exists(sample_cat_dir) and os.listdir(sample_cat_dir):
         cat_files = os.listdir(sample_cat_dir)
@@ -164,17 +183,33 @@ with st.sidebar:
     if os.path.exists(sample_dog_dir) and os.listdir(sample_dog_dir):
         dog_files = os.listdir(sample_dog_dir)
         sample_dog = os.path.join(sample_dog_dir, dog_files[0])
+
+    if os.path.exists(sample_unknown_dir) and os.listdir(sample_unknown_dir):
+        unknown_files = os.listdir(sample_unknown_dir)
+        sample_unknown = os.path.join(sample_unknown_dir, unknown_files[0])
         
-    selected_sample = None
-    col_s1, col_s2 = st.columns(2)
+    if "current_sample" not in st.session_state:
+        st.session_state.current_sample = None
+
+    col_s1, col_s2, col_s3 = st.columns(3)
     with col_s1:
-        if sample_cat and st.button("🐱 Sample Cat"):
-            selected_sample = sample_cat
+        if sample_cat and st.button("🐱 Cat"):
+            st.session_state.current_sample = sample_cat
     with col_s2:
-        if sample_dog and st.button("🐶 Sample Dog"):
-            selected_sample = sample_dog
+        if sample_dog and st.button("🐶 Dog"):
+            st.session_state.current_sample = sample_dog
+    with col_s3:
+        if sample_unknown and st.button("🚗 Other"):
+            st.session_state.current_sample = sample_unknown
+
+    if st.session_state.current_sample is not None:
+        if st.button("🔄 Clear Sample Selection"):
+            st.session_state.current_sample = None
+            st.rerun()
 
     st.markdown("---")
+    st.markdown("### 🛡️ Smart Classification")
+    st.caption("Detects Cat 🐱, Dog 🐶, or automatically flags any other object as **Unknown** ❓.")
     st.caption("Powered by PyTorch 2.13 & Streamlit")
 
 # ---------------------------------------------------------
@@ -183,7 +218,7 @@ with st.sidebar:
 st.markdown("""
 <div class="main-header">
     <div class="main-title">🐾 Cat vs Dog AI Detector</div>
-    <div class="sub-title">Upload an image or pick a sample to detect Cat 🐱 or Dog 🐶 with instant confidence analysis</div>
+    <div class="sub-title">Upload an image or pick a sample to detect Cat 🐱, Dog 🐶, or Unknown ❓ with instant AI analysis</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -205,11 +240,13 @@ with col_left:
     
     if uploaded_file is not None:
         img_to_process = Image.open(uploaded_file)
-    elif selected_sample is not None:
-        img_to_process = Image.open(selected_sample)
+        caption_text = f"Uploaded: {uploaded_file.name}"
+    elif st.session_state.current_sample is not None:
+        img_to_process = Image.open(st.session_state.current_sample)
+        caption_text = f"Sample: {os.path.basename(st.session_state.current_sample)}"
         
     if img_to_process is not None:
-        st.image(img_to_process, caption="Selected Image", use_container_width=True)
+        st.image(img_to_process, caption=caption_text, use_container_width=True)
     else:
         st.info("👆 Upload an image using the box above, or choose a sample from the sidebar!")
 
@@ -223,29 +260,57 @@ with col_right:
         with st.spinner("Analyzing image features..."):
             res = predict_image(img_to_process, model, model_type)
             
-        badge_class = "dog-badge" if res["label"] == "Dog" else "cat-badge"
+        if res["label"] == "Dog":
+            badge_class = "dog-badge"
+        elif res["label"] == "Cat":
+            badge_class = "cat-badge"
+        else:
+            badge_class = "unknown-badge"
         
-        st.markdown(f"""
-        <div class="glass-card">
-            <div class="sub-title">Detected Class</div>
-            <div class="result-badge {badge_class}">{res["emoji"]} {res["label"]}</div>
-            <div class="confidence-text">Confidence: <strong>{res["confidence"]:.1f}%</strong></div>
-            <div class="metric-row">
-                <div class="metric-box">
-                    <div class="metric-label">🐱 Cat Probability</div>
-                    <div class="metric-value" style="color: #ec4899;">{res["cat_score"]:.1f}%</div>
-                </div>
-                <div class="metric-box">
-                    <div class="metric-label">🐶 Dog Probability</div>
-                    <div class="metric-value" style="color: #3b82f6;">{res["dog_score"]:.1f}%</div>
+        if res["label"] == "Unknown":
+            st.markdown(f"""
+            <div class="glass-card">
+                <div class="sub-title">Classification Result</div>
+                <div class="result-badge {badge_class}">{res["emoji"]} {res["label"]}</div>
+                <div class="confidence-text">Neither Cat nor Dog Detected</div>
+                <div class="object-tag">🔍 Detected: {res.get('detected_object', 'Non-Cat/Dog')}</div>
+                <div class="metric-row">
+                    <div class="metric-box">
+                        <div class="metric-label">🐱 Cat Match</div>
+                        <div class="metric-value" style="color: #ec4899;">{res["cat_score"]:.1f}%</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-label">🐶 Dog Match</div>
+                        <div class="metric-value" style="color: #3b82f6;">{res["dog_score"]:.1f}%</div>
+                    </div>
                 </div>
             </div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("**Cat vs Dog Probability Distribution**")
-        st.progress(float(res["dog_score"] / 100.0), text=f"🐶 Dog ({res['dog_score']:.1f}%) | 🐱 Cat ({res['cat_score']:.1f}%)")
+            """, unsafe_allow_html=True)
+            
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.warning(f"⚠️ **Notice:** This image does not contain a Cat or Dog. The AI detected features resembling **{res.get('detected_object', 'an unknown object')}**.")
+        else:
+            st.markdown(f"""
+            <div class="glass-card">
+                <div class="sub-title">Detected Class</div>
+                <div class="result-badge {badge_class}">{res["emoji"]} {res["label"]}</div>
+                <div class="confidence-text">Confidence: <strong>{res["confidence"]:.1f}%</strong></div>
+                <div class="metric-row">
+                    <div class="metric-box">
+                        <div class="metric-label">🐱 Cat Probability</div>
+                        <div class="metric-value" style="color: #ec4899;">{res["cat_score"]:.1f}%</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-label">🐶 Dog Probability</div>
+                        <div class="metric-value" style="color: #3b82f6;">{res["dog_score"]:.1f}%</div>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("**Cat vs Dog Probability Distribution**")
+            st.progress(float(res["dog_score"] / 100.0), text=f"🐶 Dog ({res['dog_score']:.1f}%) | 🐱 Cat ({res['cat_score']:.1f}%)")
         
     else:
         st.markdown("""
