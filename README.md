@@ -63,11 +63,11 @@ Open your browser and navigate to `http://localhost:8501`.
 ---
 
 ## 📸 How to Use
-...
+
 1. Launch the web app using `streamlit run app.py`.
 2. Select a sample image from the sidebar or upload your own image.
 3. View instant predictions, confidence scores, and probability distribution charts.
-...
+
 ---
 
 ## 📄 License
